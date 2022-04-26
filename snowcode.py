@@ -585,7 +585,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-# To Do:
-## Website for nice user interface (potentially)
-## Variable encoding schemes for different payload lengths - version information stored in center hex
