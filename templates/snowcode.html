@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<head>
+    <title>SnowCode</title>
+</head>
+<body>
+    <h1>SnowCode Encoder and Decoder</h1>
+    <a href="/">Back</a>
+    <a href="https://github.com/tomerfiliba/reedsolomon">Credit</a>
+
+    <p>Encode:</p>
+    <form method="post" enctype=multipart/form-data>
+        <input type="text" name="payload" placeholder="type payload here"></input>
+        <input type="hidden" name="type" value="payload">
+        <button type="submit">Submit</button>
+    </form>
+
+    <p>Decode:</p>
+    <form method="post" enctype=multipart/form-data>
+        <input type="file" id="user_img" name="user_img" accept="image/png, image/jpeg">
+        <input type="hidden" name="type" value="user_img">
+        <button type="submit">Submit</button>
+    </form>
+
+    {% if result %}
+        <p>Result:</p>
+        <p>{{ result }}</p>
+    {% endif %}
+</body>
