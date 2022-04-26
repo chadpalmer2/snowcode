@@ -22,9 +22,12 @@ spoke_count = 6
 lines_per_spoke = 24
 line_gradations = 8
 
+# seed added to lengths to help mask line lengths
+scramble_seed = [2, 1, 2, 1, 5, 1, 0, 6, 2, 5, 5, 6, 4, 3, 7, 3, 4, 7, 6, 2, 5, 7, 0, 0, 0, 1, 6, 5, 6, 3, 1, 5, 5, 6, 7, 4, 7, 6, 1, 0, 6, 1, 4, 5, 4, 5, 2, 3, 7, 2, 5, 6, 0, 2, 4, 1, 4, 7, 0, 2, 4, 1, 2, 5, 5, 1, 2, 2, 5, 6, 4, 6, 0, 4, 7, 3, 0, 5, 1, 2, 5, 1, 6, 0, 1, 1, 0, 2, 3, 5, 0, 5, 1, 7, 7, 2, 1, 4, 1, 5, 3, 0, 0, 5, 3, 3, 3, 0, 2, 3, 3, 0, 6, 4, 1, 7, 3, 3, 4, 2, 0, 5, 1, 2, 1, 6, 4, 7, 7, 5, 3, 6, 0, 5, 3, 0, 2, 5, 0, 0, 3, 3, 3, 7, 5, 5, 3, 7, 1, 2, 7, 5, 7, 5, 1, 6, 5, 6, 4, 7, 6, 2, 6, 3, 1, 2, 5, 0, 7, 4, 4, 4, 2, 2, 5, 7, 5, 7, 2, 5, 4, 2, 5, 5, 3, 6, 5, 4, 0, 6, 3, 7, 1, 5, 5, 2, 2, 1, 6, 4, 1, 1, 1, 4, 6, 2, 6, 6, 0, 7, 4, 3, 3, 4, 7, 4, 6, 3, 0, 2, 3, 0, 2, 2, 3, 6, 0, 2, 7, 1, 6, 4, 6, 0, 3, 5, 2, 1, 5, 2, 2, 4, 6, 2, 2, 2, 3, 0, 3, 7, 1, 7, 2, 5, 7, 7, 2, 6, 4, 6, 1, 0, 3, 1, 7, 3, 5, 7, 0, 4, 4, 4, 1, 5, 7, 1, 5, 6, 0, 7, 0, 1, 5, 3, 7, 0, 1, 1]
+
 ### storage capacity in bytes = 2 * spoke_count * lines_per_spoke * log_2(line_gradations) / 8
 
-## parameters to manipulate for image feature proportions
+# parameters to manipulate for image feature proportions
 
 line_resolution = 20
 spacing = 1
@@ -37,7 +40,7 @@ total_spoke_length = center_spoke_length + main_spoke_length + endpoint_spoke_le
 
 image_size = int(total_spoke_length * 2.5)
 
-## Helpful coordinate geometry functions
+##Helpful coordinate geometry functions
 
 def get_translated_point(xy, d, angle):
     return (int(xy[0] + d * cos(angle)), int(xy[1] + d * sin(angle)))
@@ -189,9 +192,12 @@ def encode_line_lengths(payload):
             ]
             parse_list = []
 
+    lengths = [ (lengths[i] + scramble_seed[i]) % line_gradations for i in range(2 * spoke_count * lines_per_spoke) ]
     return lengths
 
 def decode_line_lengths(lengths):
+    lengths = [ (lengths[i] - scramble_seed[i]) % line_gradations for i in range(2 * spoke_count * lines_per_spoke) ]
+
     payload = []
     parse_list = []
     for line in lengths:
