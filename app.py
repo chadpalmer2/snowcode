@@ -24,6 +24,9 @@ def render_snowcode():
     else:
         return render_template('snowcode.html')
 
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000)
+
 # serving images without temp files - https://stackoverflow.com/questions/7877282/how-to-send-image-generated-by-pil-to-browser
 
 def serve_pil_image(pil_img):
