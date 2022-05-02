@@ -12,10 +12,11 @@ def index():
             img = snowcode.text_to_snowcode(request.form['payload'])
             if img:
                 return serve_pil_image(img)
-            else: render_template('index.html', result="error")
+            else:
+                return render_template('index.html', result="error: too many characters")
         elif request.form['type'] == "user_img":
             text = snowcode.snowcode_to_text(request.files['user_img'])
-            text = text if text else "error"
+            text = text if text else "error: decoding failed"
             return render_template('index.html', result=text)
     else:
         return render_template('index.html')
