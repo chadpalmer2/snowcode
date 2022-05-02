@@ -1,9 +1,29 @@
 <!DOCTYPE html>
 <head>
     <title>SnowCode</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3" crossorigin="anonymous">
+
 </head>
 <body>
-    <h1>SnowCode</h1>
-    <p>This is a work in progress for Chad Palmer's senior project in computer science and mathematics. Click below for SnowCode:</p>
-    <a href="/snowcode">SnowCode Encoder and Decoder</a>
+    <h1>SnowCode Encoder and Decoder</h1>
+    <p>As a senior project in the computer science and mathematics major, I chose to design and implement a two-dimensional barcode system of my own invention, prioritizing aesthetic appearance of the barcode while preserving storage and data robustness requirements.</p>
+
+    <p>Encode:</p>
+    <form method="post" enctype=multipart/form-data>
+        <input type="text" name="payload" placeholder="type payload here"></input>
+        <input type="hidden" name="type" value="payload">
+        <button type="submit">Submit</button>
+    </form>
+
+    <p>Decode:</p>
+    <form method="post" enctype=multipart/form-data>
+        <input type="file" id="user_img" name="user_img" accept="image/png, image/jpeg">
+        <input type="hidden" name="type" value="user_img">
+        <button type="submit">Submit</button>
+    </form>
+
+    {% if result %}
+        <p>Result:</p>
+        <p>{{ result }}</p>
+    {% endif %}
 </body>
