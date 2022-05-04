@@ -1,6 +1,5 @@
-from PIL import Image, ImageDraw, ImageEnhance, ImageStat, ImageFilter, ImageChops
-import os
-import sys
+from PIL import Image, ImageDraw, ImageStat
+from sys import stderr
 import numpy
 from math import sqrt, sin, cos, atan2, pi
 from reedsolo import RSCodec, ReedSolomonError
@@ -56,12 +55,16 @@ def get_distance(xy1, xy2):
 
 # openCV function for finding hexagons - https://stackoverflow.com/questions/60177653/how-to-detect-an-octagonal-shape-in-python-and-opencv
 
-def find_hexagons(image):
+def find_hexagons(image, debug_mode=False):
+    if debug_mode:
+        cv2.imshow('1. thresholding', image)
+        cv2.waitKey(0)
+
     # grayscale, threshold
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     thresh = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)[1]
 
-    hex_centroids = []
+    hexagons = []
 
     # find contours and detect valid hexagons
     contours, hierarchy = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
@@ -71,6 +74,12 @@ def find_hexagons(image):
 
         # check for hexagon
         if len(approx) != 6:
+            continue
+
+        concavity_measure = cv2.matchShapes(contour, cv2.convexHull(contour), cv2.CONTOURS_MATCH_I1, 0)
+
+        # check for convexity
+        if concavity_measure > 0.5:
             continue
 
         # find centroid
@@ -83,24 +92,37 @@ def find_hexagons(image):
         cX = int(M["m10"] / M["m00"])
         cY = int(M["m01"] / M["m00"])
 
-        hex_centroids.append([(cX, cY), peri])
+        hexagons.append([index, (cX, cY), peri])
+
+        if debug_mode:
+            cv2.drawContours(image, [contour], 0, (0,255,0), 3)
+
+    if debug_mode:
+        cv2.imshow('2. all hexagons', image)
+        cv2.waitKey(0)
 
     # exit if insufficient number of hexagons found
-    if len(hex_centroids) < 11:
+    if len(hexagons) < 11:
         return []
 
     # get 11 largest hexagons
-    hex_centroids.sort(reverse=True, key=lambda x: x[1])
-    hex_centroids = hex_centroids[0:11]
+    hexagons.sort(reverse=True, key=lambda x: x[2])
+    hexagons = hexagons[0:11]
+
+    if debug_mode:
+        for hex in hexagons:
+            cv2.drawContours(image, [contours[hex[0]]], 0, (255,0,0), 3)
+        cv2.imshow('3. largest hexagons', image)
+        cv2.waitKey(0)
 
     # get black_hexes
-    middle = hex_centroids[0][0]
+    middle = hexagons[0][1]
     black_hexes = []
 
-    for h in hex_centroids[2:11]:
-        x, y = h[0]
+    for h in hexagons[2:11]:
+        x, y = h[1]
         if image[y][x][0] == 0:
-            black_hexes.append(h[0])
+            black_hexes.append(h[1])
 
     if len(black_hexes) != 6:
         return []
@@ -108,7 +130,7 @@ def find_hexagons(image):
     black_hexes.sort()
     a, b, c = black_hexes[0], black_hexes[2], black_hexes[4]
 
-    ## some silly math to figure out which black hex is which
+    ## some distance math to figure out which black hex is which
     dist_ab = get_distance(a, b)[0]
     dist_bc = get_distance(b, c)[0]
     dist_ac = get_distance(a, c)[0]
@@ -142,10 +164,18 @@ def find_hexagons(image):
     ## calculating approx location of bottom right hex and correcting from actual hexes
     trans_dist = get_distance(top_left, middle)
     bottom_right = get_translated_point(top_left, 2 * trans_dist[0], trans_dist[1])
-    bottom_right = min(hex_centroids, key=lambda x: get_distance(bottom_right, x[0])[0])[0]
+    bottom_right = min(hexagons, key=lambda x: get_distance(bottom_right, x[1])[0])[1]
+
+    perspective_transform_array = [ top, top_left, bottom, bottom_right ]
+
+    if debug_mode:
+        for point in perspective_transform_array:
+            cv2.circle(image, point, radius=0, color=(0, 0, 255), thickness=5)
+        cv2.imshow('4. centroids of locator hexes', image)
+        cv2.waitKey(0)
 
     # returning hex coordinates for perspective shift
-    return [ top, top_left, bottom, bottom_right ]
+    return perspective_transform_array
 
 # numpy helper function for perspective transform - https://stackoverflow.com/questions/14177744/how-does-perspective-transformation-work-in-pil
 
@@ -174,7 +204,7 @@ def encode_payload(data):
 def decode_payload(payload):
     return rsc.decode(payload)
 
-def encode_line_lengths(payload):
+def encode_line_lengths(payload, debug_mode=False):
     lengths = []
     parse_list = []
     for encoded_byte in payload:
@@ -192,7 +222,16 @@ def encode_line_lengths(payload):
             ]
             parse_list = []
 
+    if debug_mode:
+        print("lengths, premask")
+        print(lengths)
+
     lengths = [ (lengths[i] + scramble_seed[i]) % line_gradations for i in range(2 * spoke_count * lines_per_spoke) ]
+    
+    if debug_mode:
+        print("lengths, postmask")
+        print(lengths)
+
     return lengths
 
 def decode_line_lengths(lengths):
@@ -279,7 +318,7 @@ def build_image(lengths):
 
 # image decoding functions
 
-def decode_processed_image(img):
+def decode_processed_image(img, debug_mode=False):
     spoke_point_translation_angles = [
         pi / 2,
         3 * pi / 2,
@@ -292,7 +331,8 @@ def decode_processed_image(img):
     middle = (image_size // 2, image_size // 2)
     spoke_points = [ get_translated_point(middle, total_spoke_length, angle) for angle in spoke_point_translation_angles ]
 
-    # d = ImageDraw.Draw(img)
+    if debug_mode:
+        d = ImageDraw.Draw(img)
 
     lengths = []
     for index in range(2 * spoke_count * lines_per_spoke):
@@ -314,9 +354,10 @@ def decode_processed_image(img):
             samples = [ img.getpixel(get_translated_point(end_point, i, angle)) for i in range(-int(max_distance / 24), int(max_distance / 24)) ]
             avg = sum(samples) / len(samples)
 
-            # for i in range(-int(max_distance / 24), int(max_distance / 24)):
-            #     pixel = get_translated_point(end_point, i, angle)
-            #     d.point([pixel], fill=255 - img.getpixel(pixel))
+            if debug_mode:
+                for i in range(-int(max_distance / 24), int(max_distance / 24)):
+                    pixel = get_translated_point(end_point, i, angle)
+                    d.point([pixel], fill=255 - img.getpixel(pixel))
 
             if avg >= 10 and avg <= 235:
                 lengths.append(length)
@@ -324,21 +365,28 @@ def decode_processed_image(img):
         else:
             lengths.append(0)
 
-    # img.show()
+    if debug_mode:
+        img.show("pixel value sampling")
 
     # RS decoding
 
     payload = decode_line_lengths(lengths)
 
+    if debug_mode:
+        print("lengths:")
+        print(lengths)
+        print("payload:")
+        print(payload)
+
     try:
         data = decode_payload(payload)[0].decode()
     except:
-        print("RS decryption failed: too many errors", file=sys.stderr)
+        print("RS decryption failed: too many errors", file=stderr)
         return
 
     return data
 
-def process_image(img):
+def process_image(img, debug_mode=False):
     # Render image in black and white
 
     out = Image.new('I', img.size, 0xffffff)
@@ -349,7 +397,7 @@ def process_image(img):
     # Get spoke points
 
     opencvImage = cv2.cvtColor(numpy.array(out.convert('RGB')), cv2.COLOR_RGB2BGR)
-    real_spoke_points = find_hexagons(opencvImage)
+    real_spoke_points = find_hexagons(opencvImage, debug_mode)
 
     if real_spoke_points == []:
         print("Snowflake not detected.")
@@ -370,9 +418,14 @@ def process_image(img):
 
     out.resize((image_size, image_size))
 
+    if debug_mode:
+        out.show("5. perspective transform")
+
     return out
 
 def old_decode_image(filename):
+    # Not functional/supported
+
     try:
         img = Image.open(filename)
     except:
@@ -548,44 +601,58 @@ def old_decode_image(filename):
 
 # external API
 
-def text_to_snowcode(text):
+def text_to_snowcode(text, debug_mode=False):
     data = text.encode()
 
     if len(data) > data_size_limit:
-        print(f"limit: { data_size_limit } character maximum", file=sys.stderr)
+        print(f"limit: { data_size_limit } character maximum", file=stderr)
         return
 
     data += (b'\0') * (data_size_limit - len(data)) # null character padding
 
-    payload = encode_payload(data)
-    lengths = encode_line_lengths(payload)
+    if debug_mode:
+        print("encoded and padded data")
+        print(data)
 
+    payload = encode_payload(data)
+
+    if debug_mode:
+        print("RS encoded data")
+        print(payload)
+
+    lengths = encode_line_lengths(payload, debug_mode)
     return build_image(lengths)
 
-def snowcode_to_text(filename):
+def snowcode_to_text(filename, debug_mode=False):
     try:
         img = Image.open(filename)
     except:
-        print("no such file", file=sys.stderr)
+        print("no such file", file=stderr)
         return
 
-    processed_img = process_image(img)
+    processed_img = process_image(img, debug_mode)
     if not processed_img:
+        print("error processing image", file=stderr)
         return
 
-    return decode_processed_image(processed_img)
+    return decode_processed_image(processed_img, debug_mode)
 
 def main():
+    print("debugging? [y, n]")
+    debug_mode = (input()[0] == 'y')
+
     print("encoding or decoding?")
     option = input()
     if len(option) != 0 and option[0] in ['e', 'E']:
         print("encoding selected. provide payload:")
-        img = text_to_snowcode(input())
+        img = text_to_snowcode(input(), debug_mode)
         if img:
             img.show()
     else:
         print("decoding selected. provide filename:")
-        text = snowcode_to_text(input())
+        f = input()
+
+        text = snowcode_to_text(f, debug_mode)
         if text:
             print(text)
 
