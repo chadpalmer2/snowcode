@@ -69,17 +69,15 @@ def find_hexagons(image, debug_mode=False):
     # find contours and detect valid hexagons
     contours, hierarchy = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     for index, contour in enumerate(contours):
+        # check for hexagon through polynomial approximation
         peri = cv2.arcLength(contour, True)
-        approx = cv2.approxPolyDP(contour, 0.04 * peri, True)
-
-        # check for hexagon
+        approx = cv2.approxPolyDP(contour, 0.05 * peri, True)
         if len(approx) != 6:
             continue
 
-        concavity_measure = cv2.matchShapes(contour, cv2.convexHull(contour), cv2.CONTOURS_MATCH_I1, 0)
-
         # check for convexity
-        if concavity_measure > 0.5:
+        concavity_measure = cv2.matchShapes(contour, cv2.convexHull(contour), cv2.CONTOURS_MATCH_I1, 0)
+        if concavity_measure > 0.05:
             continue
 
         # find centroid
@@ -95,7 +93,7 @@ def find_hexagons(image, debug_mode=False):
         hexagons.append([index, (cX, cY), peri])
 
         if debug_mode:
-            cv2.drawContours(image, [contour], 0, (0,255,0), 3)
+            cv2.drawContours(image, [contour], 0, (255,0,0), 3)
 
     if debug_mode:
         cv2.imshow('2. all hexagons', image)
@@ -111,7 +109,7 @@ def find_hexagons(image, debug_mode=False):
 
     if debug_mode:
         for hex in hexagons:
-            cv2.drawContours(image, [contours[hex[0]]], 0, (255,0,0), 3)
+            cv2.drawContours(image, [contours[hex[0]]], 0, (0,0,255), 3)
         cv2.imshow('3. largest hexagons', image)
         cv2.waitKey(0)
 
@@ -419,7 +417,9 @@ def process_image(img, debug_mode=False):
     out.resize((image_size, image_size))
 
     if debug_mode:
-        out.show("5. perspective transform")
+        opencvImage = cv2.cvtColor(numpy.array(out.convert('RGB')), cv2.COLOR_RGB2BGR)
+        cv2.imshow("5. perspective transform", opencvImage)
+        cv2.waitKey(0)
 
     return out
 
