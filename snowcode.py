@@ -85,8 +85,8 @@ def find_hexagons(image, debug_mode=False):
         # find centroid
         M = cv2.moments(contour)
 
-        # eliminate corner cases/division by zero
-        if M["m00"] == 0:
+        # eliminate corner cases: division by zero, shape bigger than image itself
+        if M["m00"] == 0 or (peri >= 2 * len(image) + 2 * len(image[0])):
             continue
 
         cX = int(M["m10"] / M["m00"])
