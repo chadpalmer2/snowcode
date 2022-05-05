@@ -5,25 +5,35 @@
 
 </head>
 <body>
-    <h1>SnowCode Encoder and Decoder</h1>
-    <p>As a senior project in the computer science and mathematics major, I chose to design and implement a two-dimensional barcode system of my own invention, prioritizing aesthetic appearance of the barcode while preserving storage and data robustness requirements.</p>
+    <div style="text-align: center">
+        <div style="margin-bottom: 10px">
+            <h1>SnowCode Encoder and Decoder</h1>
+            <p>By Chad Palmer - <a href="https://github.com/chadpalmer2/snowcode">Learn more</a></p>
+        </div>
 
-    <p>Encode:</p>
-    <form method="post" enctype=multipart/form-data>
-        <input type="text" name="payload" placeholder="type payload here"></input>
-        <input type="hidden" name="type" value="payload">
-        <button type="submit">Submit</button>
-    </form>
+        <br>
 
-    <p>Decode:</p>
-    <form method="post" enctype=multipart/form-data>
-        <input type="file" id="user_img" name="user_img" accept="image/png, image/jpeg">
-        <input type="hidden" name="type" value="user_img">
-        <button type="submit">Submit</button>
-    </form>
+        <h4>Encode:</h4>
+        <form method="post" enctype=multipart/form-data>
+            <input type="text" name="payload" placeholder="type payload here"></input>
+            <input type="hidden" name="type" value="payload">
+            <button type="submit">Submit</button>
+        </form>
 
-    {% if result %}
-        <p>Result:</p>
-        <p>{{ result }}</p>
-    {% endif %}
+        <br>
+
+        <h4>Decode:</h4>
+        <form method="post" enctype=multipart/form-data>
+            <input type="file" id="user_img" name="user_img" accept="image/png, image/jpeg">
+            <input type="hidden" name="type" value="user_img">
+            <button type="submit">Submit</button>
+        </form>
+
+        <br>
+
+        {% if result %}
+            <h4>Result:</h4>
+            <p>{{ result }}</p>
+        {% endif %}
+    </div>
 </body>
